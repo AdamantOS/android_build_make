@@ -34,7 +34,7 @@ except ImportError:
 
 # Config
 # set this to the default remote to use in repo
-default_rem = "gh"
+default_rem = "github"
 # set this to the default revision to use (branch/tag name)
 default_rev = "adamant-8.1"
 # set this to the remote that you use for projects from your team repos
@@ -55,7 +55,7 @@ def check_repo_exists(git_data):
 # Note that this can only be done 5 times per minute
 def search_github_for_device(device):
     git_search_url = "https://api.github.com/search/repositories" \
-                     "?q=%40{}+android_device+{}+fork:true".format(android_team, device)
+                     "?q=%40{}+android_device+{}".format(android_team, device)
     git_req = urllib.request.Request(git_search_url)
     # this api is a preview at the moment. accept the custom media type
     git_req.add_header('Accept', 'application/vnd.github.preview')
@@ -85,17 +85,15 @@ def get_device_url(git_data):
                     break
 
     if device_url:
-        return "{}/{}".format(android_team, device_url)
+        return device_url
     raise Exception("{} not found in {} Github, exiting "
                     "roomservice".format(device, android_team))
 
 
-def parse_device_directory(device_url,device):
+def parse_device_directory(device_url):
     to_strip = "android_device"
     repo_name = device_url[device_url.index(to_strip) + len(to_strip):]
-    repo_name = repo_name[:repo_name.index(device)]
     repo_dir = repo_name.replace("_", "/")
-    repo_dir = repo_dir + device
     return "device{}".format(repo_dir)
 
 
@@ -229,7 +227,7 @@ def create_dependency_manifest(dependencies):
 
         # not adding an organization should default to android_team
         # only apply this to github
-        if remote == "gh":
+        if remote == "github":
             if not "/" in repository:
                 repository = '/'.join([android_team, repository])
         project = create_manifest_project(repository,
@@ -241,32 +239,22 @@ def create_dependency_manifest(dependencies):
             write_to_manifest(manifest)
             projects.append(target_path)
     if len(projects) > 0:
-        os.system("repo sync -f --no-clone-bundle %s" % " ".join(projects))
+        os.system("repo sync %s" % " ".join(projects))
 
 
 def fetch_dependencies(device):
     location = parse_device_from_folder(device)
-    if location is None or not os.path.isdir(location):
+    if not os.path.isdir(location):
         raise Exception("ERROR: could not find your device "
                         "folder location, bailing out")
     dependencies = parse_dependency_file(location)
     create_dependency_manifest(dependencies)
 
 
-def check_device_exists(device):
-    location = parse_device_from_folder(device)
-    if location is None:
-        return False
-    return os.path.isdir(location)
-
-
 def fetch_device(device):
-    if check_device_exists(device):
-        print("WARNING: Trying to fetch a device that's already there")
-        return
     git_data = search_github_for_device(device)
     device_url = get_device_url(git_data)
-    device_dir = parse_device_directory(device_url,device)
+    device_dir = parse_device_directory(device_url)
     project = create_manifest_project(device_url,
                                       device_dir,
                                       remote=default_team_rem)
@@ -274,7 +262,8 @@ def fetch_device(device):
         manifest = append_to_manifest(project)
         write_to_manifest(manifest)
         print("syncing the device config")
-        os.system('repo sync -f --no-clone-bundle %s' % device_dir)
+        os.system('repo sync %s' % device_dir)
+    fetch_dependencies(device)
 
 
 if __name__ == '__main__':
@@ -292,6 +281,7 @@ if __name__ == '__main__':
     else:
         deps_only = False
 
-    if not deps_only:
+    if deps_only:
+        fetch_dependencies(device)
+    else:
         fetch_device(device)
-    fetch_dependencies(device)
