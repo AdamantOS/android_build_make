@@ -20,6 +20,8 @@ Invoke ". build/envsetup.sh" from your shell to add the following functions to y
 - sepgrep:   Greps on all local sepolicy files.
 - sgrep:     Greps on all local source files.
 - godir:     Go to the directory containing a file.
+- amremote:  Add git remote for matching Adamant repository.
+
 
 Environment options:
 - SANITIZE_HOST: Set to 'true' to use ASAN for all host modules. Note that
@@ -152,6 +154,20 @@ function check_variant()
     done
     return 1
 }
+
+function amremote()
+{
+    git remote rm adamant 2> /dev/null
+    if [ ! -d .git ]
+    then
+        echo .git directory not found. Please run this from the root directory of the Android repository you wish to set up.
+    fi
+    PROJECT=`pwd -P | sed s#$ANDROID_BUILD_TOP/##g`
+    PFX="android_$(echo $PROJECT | sed 's/\//_/g')"
+    git remote add cm git@github.com/AdamantOS/$PFX
+    echo "Remote 'adamant' created"
+}
+
 
 function setpaths()
 {
@@ -603,6 +619,20 @@ function lunch()
     fi
 
     if [ -z "$product" ]
+    then
+       # if we can't find the product, try to grab it from our github
+      T=$(gettop)
+      pushd $T > /dev/null
+      build/tools/roomservice.py $variant
+      popd > /dev/null
+      check_variant $variant
+    else
+      T=$(gettop)
+      pushd $T > /dev/null
+      build/tools/roomservice.py $variant true
+      popd > /dev/null
+    fi
+    if [ $? -ne 0 ]
     then
         echo
         echo "Invalid lunch combo: $selection"
