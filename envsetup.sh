@@ -21,6 +21,7 @@ Invoke ". build/envsetup.sh" from your shell to add the following functions to y
 - sgrep:     Greps on all local source files.
 - godir:     Go to the directory containing a file.
 - amremote:  Add git remote for matching Adamant repository.
+- aospremote:Add git remote for matching AOSP repository.
 - mka:       Builds using SCHED_BATCH on all processors
 
 
@@ -165,8 +166,24 @@ function amremote()
     fi
     PROJECT=`pwd -P | sed s#$ANDROID_BUILD_TOP/##g`
     PFX="android_$(echo $PROJECT | sed 's/\//_/g')"
-    git remote add cm git@github.com/AdamantOS/$PFX
+    git remote add adamant git@github.com/AdamantOS/$PFX
     echo "Remote 'adamant' created"
+}
+
+function aospremote()
+{
+    git remote rm aosp 2> /dev/null
+    if [ ! -d .git ]
+    then
+        echo .git directory not found. Please run this from the root directory of the Android repository you wish to set up.
+    fi
+    PROJECT=`pwd -P | sed s#$ANDROID_BUILD_TOP/##g`
+    if (echo $PROJECT | grep -qv "^device")
+    then
+        PFX="platform/"
+    fi
+    git remote add aosp https://android.googlesource.com/$PFX$PROJECT
+    echo "Remote 'aosp' created"
 }
 
 function mka() {
