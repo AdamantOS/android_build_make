@@ -168,7 +168,7 @@ function amremote()
     fi
     PROJECT=`pwd -P | sed s#$ANDROID_BUILD_TOP/##g`
     PFX="android_$(echo $PROJECT | sed 's/\//_/g')"
-    git remote add adamant git@github.com/AdamantOS/$PFX
+    git remote add adamant git@github.com:AdamantOS/$PFX.git
     echo "Remote 'adamant' created"
 }
 
@@ -1786,3 +1786,5 @@ done
 unset f
 
 addcompletions
+
+export ANDROID_BUILD_TOP=$(gettop)
